@@ -1,8 +1,8 @@
 import random
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
-from numpy.random import beta
+from numpy.random import beta, binomial
 
 
 @dataclass
@@ -11,12 +11,20 @@ class Content:
 
 
 class ContentsServer:
-    def __init__(self, contents: List[Content]) -> None:
+    ALGO_TYPE_RANDOM = "random"
+    ALGO_TYPE_THOMPSON_SAMPLING = "thompson_sampling"
+    ALGO_TYPE_EPSILON_GREEDY = "epsilon_greedy"
+
+
+    def __init__(self, contents: List[Content], algo_type: str, exploration_rate: Optional[float] = None) -> None:
         self.contents = contents
         self.clicks = {c.name: 0 for c in contents}
         self.impressions = {c.name: 0 for c in contents}
         self.ctrs = {c.name: 0 for c in contents}
         self.ctr = 0
+
+        self.algo_type = algo_type
+        self.exploration_rate = exploration_rate
 
     def algorithm_random(self) -> None:
         return random.sample(self.contents, 1)[0]
@@ -31,9 +39,29 @@ class ContentsServer:
         max_index = scores.index(max(scores))
         return self.contents[max_index]
 
+    def algorithm_epsilon_greedy(self, exploration_rate: float) -> None:
+        # exploration
+        if binomial(n=1, p=exploration_rate) == 1:
+            index = random.randint(0, len(self.contents)-1)
+            return self.contents[index]
+
+        # exploitation
+        # Get content with highest CTR
+        ctr_values = list(self.ctrs.values())
+        max_index = ctr_values.index(max(ctr_values))
+        return self.contents[max_index]
+
+    def _get_content(self) -> Content:
+        if self.algo_type == self.ALGO_TYPE_RANDOM:
+            return self.algorithm_random()
+        if self.algo_type == self.ALGO_TYPE_THOMPSON_SAMPLING:
+            return self.algorithm_thompson_sampling()
+        if self.algo_type == self.ALGO_TYPE_EPSILON_GREEDY:
+            return self.algorithm_epsilon_greedy(self.exploration_rate)
+        raise ValueError(f"Unknown algo_type: {self.algo_type}")
+
     def get_content(self) -> Content:
-        # content = self.algorithm_random()
-        content = self.algorithm_thompson_sampling()
+        content = self._get_content()
         self.impressions[content.name] += 1
         return content
 
@@ -51,7 +79,7 @@ class ContentsServer:
         total_impressions = sum(self.impressions.values())
         self.ctr = total_clicks / total_impressions
 
-    def _show(self) -> None:
+    def _show_stats(self) -> None:
         self._update_ctrs()
         print(f"clicks     :\t{self.clicks}")
         print(f"server imps:\t{self.impressions}")
@@ -64,31 +92,27 @@ class User:
     name: str
     preferences: List[Content]
 
-    def click(self, content: Content) -> bool:
+    def does_click(self, content: Content) -> bool:
         prefer_content_now = random.sample(self.preferences, 1)[0]
         return prefer_content_now.name == content.name
 
 if __name__ == "__main__":
+    algo_type = ContentsServer.ALGO_TYPE_THOMPSON_SAMPLING
     content_dog = Content("dog")
     content_cat = Content("cat")
     content_bird = Content("bird")
+    master_contents = [content_dog, content_cat, content_bird]
+    contents_server = ContentsServer(master_contents, algo_type)
 
-    count = {
-        "dog": 0,
-        "cat": 0,
-        "bird": 0,
-    }
-    contents_server = ContentsServer([content_dog, content_cat, content_bird])
     userA_preferences = [content_dog] * 15 + [content_cat] * 80 + [content_bird] * 5
     userA = User("user", userA_preferences)
-    for i in range(100000):
+    for i in range(100000000):
         content = contents_server.get_content()
-        count[content.name] += 1
-        user_clicked = userA.click(content)
+        user_clicked = userA.does_click(content)
         if user_clicked:
             contents_server.send_click(content)
         if i % 10000 == 0:
             print(f"===={i}====")
-            contents_server._show()
+            contents_server._show_stats()
 
 
