@@ -19,10 +19,12 @@ def UCB(arms, T):
         scores = [__get_score(arm, i) for arm in arms]
         max_score_index = scores.index(max(scores))
         reward += arms[max_score_index].play()
+        if i % 100 == 0:
+            print(f"{i}:{reward}")
     return reward
 
 if __name__ == "__main__":
-    T = 1000
+    T = 1000000
     arms = [Arm(i/200 + 0.5) for i in range(100)]
     r = UCB(arms, T)
     print(f"reward={r}")

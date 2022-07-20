@@ -11,10 +11,12 @@ def thompson_sampling(arms, T):
         # 推定値が一番高いアームを選択
         max_index = rand_gened_params.index(max(rand_gened_params))
         reward += arms[max_index].play()
+        if i % 100 == 0:
+            print(f"{i}:{reward}")
     return reward
 
 if __name__ == "__main__":
-    T = 1000
+    T = 1000000
     arms = [Arm(i/200 + 0.5) for i in range(100)]
     r = thompson_sampling(arms, T)
     print(f"reward={r}")
