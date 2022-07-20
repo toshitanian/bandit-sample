@@ -23,7 +23,7 @@ def epsilon_greedy(arms, T, epsilon):
 
 if __name__ == "__main__":
     T = 1000
-    arms = [Arm(i/100) for i in range(100)]
+    arms = [Arm(i/200 + 0.5) for i in range(100)]
     for e in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]:
         r = epsilon_greedy(arms, T, e)
         print(f"epsilon={e}, reward={r}")

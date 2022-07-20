@@ -23,6 +23,6 @@ def UCB(arms, T):
 
 if __name__ == "__main__":
     T = 1000
-    arms = [Arm(i/100) for i in range(100)]
+    arms = [Arm(i/200 + 0.5) for i in range(100)]
     r = UCB(arms, T)
     print(f"reward={r}")
