@@ -1,3 +1,4 @@
+import math
 import random
 from dataclasses import dataclass
 from typing import List, Optional
@@ -14,6 +15,7 @@ class ContentsServer:
     ALGO_TYPE_RANDOM = "random"
     ALGO_TYPE_THOMPSON_SAMPLING = "thompson_sampling"
     ALGO_TYPE_EPSILON_GREEDY = "epsilon_greedy"
+    ALGO_TYPE_UCB = "ucb"
     CTR_UPDATE_INTERVAL = 100
 
     def __init__(self, contents: List[Content], algo_type: str, exploration_rate: Optional[float] = None) -> None:
@@ -34,8 +36,8 @@ class ContentsServer:
         scores = []
         for content in self.contents:
             success = self.clicks[content.name]
-            fails = self.impressions[content.name] - success
-            score = beta(a=success + 1, b=fails+1)
+            fail = self.impressions[content.name] - success
+            score = beta(a=success + 1, b=fail+1)
             scores.append(score)
         max_index = scores.index(max(scores))
         return self.contents[max_index]
@@ -52,6 +54,17 @@ class ContentsServer:
         max_index = ctr_values.index(max(ctr_values))
         return self.contents[max_index]
 
+    def algorithm_ucb(self) -> None:
+        def _get_score(content: Content, t: int):
+            t = t or 1 # if t 0 set to 1
+            success = self.clicks[content.name]
+            imp = self.impressions[content.name] or 1 
+            ucb = math.sqrt(2*math.log(t) / imp)
+            return (success / imp) + ucb
+        scores = [_get_score(c, self.total_impressions) for c in self.contents]
+        max_score_index = scores.index(max(scores))
+        return self.contents[max_score_index]
+
     def _get_content(self) -> Content:
         if self.algo_type == self.ALGO_TYPE_RANDOM:
             return self.algorithm_random()
@@ -59,6 +72,8 @@ class ContentsServer:
             return self.algorithm_thompson_sampling()
         if self.algo_type == self.ALGO_TYPE_EPSILON_GREEDY:
             return self.algorithm_epsilon_greedy(self.exploration_rate)
+        if self.algo_type == self.ALGO_TYPE_UCB:
+            return self.algorithm_ucb()
         raise ValueError(f"Unknown algo_type: {self.algo_type}")
 
     def get_content(self) -> Content:
@@ -100,7 +115,7 @@ class User:
         return prefer_content_now.name == content.name
 
 if __name__ == "__main__":
-    algo_type = ContentsServer.ALGO_TYPE_THOMPSON_SAMPLING
+    algo_type = ContentsServer.ALGO_TYPE_UCB
     content_dog = Content("dog")
     content_cat = Content("cat")
     content_bird = Content("bird")
