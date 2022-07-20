@@ -2,6 +2,8 @@ import random
 from dataclasses import dataclass
 from typing import List
 
+from numpy.random import beta
+
 
 @dataclass
 class Content:
@@ -16,8 +18,22 @@ class ContentsServer:
         self.ctrs = {c.name: 0 for c in contents}
         self.ctr = 0
 
+    def algorithm_random(self) -> None:
+        return random.sample(self.contents, 1)[0]
+
+    def algorithm_thompson_sampling(self) -> None:
+        scores = []
+        for content in self.contents:
+            success = self.clicks[content.name]
+            fails = self.impressions[content.name] - success
+            score = beta(a=success + 1, b=fails+1)
+            scores.append(score)
+        max_index = scores.index(max(scores))
+        return self.contents[max_index]
+
     def get_content(self) -> Content:
-        content = random.sample(self.contents, 1)[0]
+        # content = self.algorithm_random()
+        content = self.algorithm_thompson_sampling()
         self.impressions[content.name] += 1
         return content
 
@@ -40,7 +56,7 @@ class ContentsServer:
         print(f"clicks     :\t{self.clicks}")
         print(f"server imps:\t{self.impressions}")
         print(f"CTRs       :\t{self.ctrs}")
-        print(f"totaol CTR :\t{self.ctr}")
+        print(f"total CTR  :\t{self.ctr}")
 
 
 @dataclass
@@ -53,26 +69,26 @@ class User:
         return prefer_content_now.name == content.name
 
 if __name__ == "__main__":
-    contentDog = Content("dog")
-    contentCat = Content("cat")
-    contentBird = Content("bird")
+    content_dog = Content("dog")
+    content_cat = Content("cat")
+    content_bird = Content("bird")
 
     count = {
         "dog": 0,
         "cat": 0,
         "bird": 0,
     }
-    contents_server = ContentsServer([contentDog, contentCat, contentBird])
-    userA = User("user", [contentDog, contentCat, contentCat])
+    contents_server = ContentsServer([content_dog, content_cat, content_bird])
+    userA_preferences = [content_dog] * 15 + [content_cat] * 80 + [content_bird] * 5
+    userA = User("user", userA_preferences)
     for i in range(100000):
         content = contents_server.get_content()
         count[content.name] += 1
         user_clicked = userA.click(content)
         if user_clicked:
             contents_server.send_click(content)
-        if i % 1000 == 0:
+        if i % 10000 == 0:
             print(f"===={i}====")
-            print(f"server imps:\t{count}")
             contents_server._show()
 
 
