@@ -90,7 +90,7 @@ class ContentsServer:
 @dataclass
 class User:
     name: str
-    preferences: List[Content]
+    preferences: List[List[Content]]
 
     def does_click(self, content: Content) -> bool:
         prefer_content_now = random.sample(self.preferences, 1)[0]
@@ -104,15 +104,27 @@ if __name__ == "__main__":
     master_contents = [content_dog, content_cat, content_bird]
     contents_server = ContentsServer(master_contents, algo_type)
 
-    userA_preferences = [content_dog] * 15 + [content_cat] * 80 + [content_bird] * 5
-    userA = User("user", userA_preferences)
+    user_preferences1 = [content_dog] * 15 + [content_cat] * 80 + [content_bird] * 5
+    user_preferences2 = [content_dog] * 70 + [content_cat] * 25 + [content_bird] * 5
+    user_preferences3 = [content_dog] * 30 + [content_cat] * 30 + [content_bird] * 40
+    user1 = User("user-cat", user_preferences1)
+    user2 = User("user-dog", user_preferences2)
+    user3 = User("user-bird", user_preferences3)
+    users = [user1, user2, user3]
+    initial_user = random.sample(users, 1)[0]
+
+    user = initial_user
+
     for i in range(100000000):
         content = contents_server.get_content()
-        user_clicked = userA.does_click(content)
+        user_clicked = user.does_click(content)
         if user_clicked:
             contents_server.send_click(content)
-        if i % 10000 == 0:
-            print(f"===={i}====")
+        if i % 10_000 == 0:
+            print(f"===={i}:{user.name}====")
             contents_server._show_stats()
+        if i % 100_000 == 0:
+            new_user = random.sample(users, 1)[0]
+            user = new_user
 
 
