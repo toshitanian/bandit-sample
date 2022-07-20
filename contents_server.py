@@ -14,7 +14,7 @@ class ContentsServer:
     ALGO_TYPE_RANDOM = "random"
     ALGO_TYPE_THOMPSON_SAMPLING = "thompson_sampling"
     ALGO_TYPE_EPSILON_GREEDY = "epsilon_greedy"
-
+    CTR_UPDATE_INTERVAL = 100
 
     def __init__(self, contents: List[Content], algo_type: str, exploration_rate: Optional[float] = None) -> None:
         self.contents = contents
@@ -22,6 +22,7 @@ class ContentsServer:
         self.impressions = {c.name: 0 for c in contents}
         self.ctrs = {c.name: 0 for c in contents}
         self.ctr = 0
+        self.total_impressions = 0
 
         self.algo_type = algo_type
         self.exploration_rate = exploration_rate
@@ -63,6 +64,9 @@ class ContentsServer:
     def get_content(self) -> Content:
         content = self._get_content()
         self.impressions[content.name] += 1
+        self.total_impressions += 1
+        if self.total_impressions % self.CTR_UPDATE_INTERVAL == 0:
+            self._update_ctrs()
         return content
 
     def send_click(self, content: Content) -> None:
@@ -80,7 +84,6 @@ class ContentsServer:
         self.ctr = total_clicks / total_impressions
 
     def _show_stats(self) -> None:
-        self._update_ctrs()
         print(f"clicks     :\t{self.clicks}")
         print(f"server imps:\t{self.impressions}")
         print(f"CTRs       :\t{self.ctrs}")
